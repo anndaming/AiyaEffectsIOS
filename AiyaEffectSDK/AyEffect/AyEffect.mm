@@ -10,12 +10,36 @@
 #import "RenderSticker.h"
 #include "AYEffectConstants.h"
 
-void funcAyEffectMessage(int type, int ret, const char *info){
-    [[NSNotificationCenter defaultCenter] postNotificationName:AiyaMessageNotification object:nil userInfo:@{AiyaMessageNotificationUserInfoKey:[NSString stringWithUTF8String:info]}];
-}
+/**
+ * 特效播放中
+ */
+int MSG_STAT_EFFECTS_PLAY = 0x00020000;
+
+/**
+ * 特效播放结束
+ */
+int MSG_STAT_EFFECTS_END = 0x00040000;
+
+/**
+ * 特效播放开始
+ */
+int MSG_STAT_EFFECTS_START = 0x00080000;
+
+class AyEffectCallBack
+{
+public:
+    AyEffect *ayEffect;
+    
+    void effectMessage(int type, int ret, const char *info){
+        if (ayEffect.delegate) {
+            [ayEffect.delegate effectMessageWithType:type ret:ret];
+        }
+    }
+};
 
 @interface AyEffect (){
     std::shared_ptr<AiyaRender::RenderSticker> render;
+    AyEffectCallBack effectCallBack;
     
     BOOL updateEffectPath;
     BOOL updateFaceData;
@@ -26,12 +50,14 @@ void funcAyEffectMessage(int type, int ret, const char *info){
 @implementation AyEffect
 
 - (void)initGLResource{
+    effectCallBack.ayEffect = self; // 此处为循环引用
     render = std::make_shared<AiyaRender::RenderSticker>();
-    render->message = funcAyEffectMessage;
+    render->message = std::bind(&AyEffectCallBack::effectMessage, &effectCallBack, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
 }
 
 - (void)releaseGLtContext{
     render->release();
+    effectCallBack.ayEffect = nil; // 释放循环引用
 }
 
 - (void)setEffectPath:(NSString *)effectPath{

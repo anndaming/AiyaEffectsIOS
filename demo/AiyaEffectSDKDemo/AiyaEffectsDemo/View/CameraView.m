@@ -13,7 +13,9 @@
 
 @interface CameraView ()<UICollectionViewDelegate, UICollectionViewDataSource>
 
+@property (nonatomic, strong) UIView *bottomLayout;
 @property (nonatomic, strong) UICollectionView *collectionView;
+@property (nonatomic, strong) UIButton *switchCamera;
 @property (nonatomic, strong) UIButton *effectBt;
 @property (nonatomic, strong) UIButton *beautifyBt;
 @property (nonatomic, strong) UIButton *styleBt;
@@ -65,8 +67,8 @@
     flowFlayout.itemSize = CGSizeMake(55.0,71.0);
     flowFlayout.scrollDirection = UICollectionViewScrollDirectionHorizontal;
     
-    UIView *layout = [[UIView alloc]init];
-    layout.clipsToBounds = YES;
+    self.bottomLayout = [[UIView alloc]init];
+    self.bottomLayout.clipsToBounds = YES;
 
     _collectionView = [[UICollectionView alloc] initWithFrame: CGRectZero collectionViewLayout:flowFlayout];
     self.collectionView.backgroundColor = [UIColor clearColor];
@@ -93,15 +95,22 @@
     self.slider.value = 0;
     self.slider.hidden = YES;
     [self.slider addTarget:self action:@selector(sliderValueChange) forControlEvents:UIControlEventValueChanged];
-
-    [layout addSubview:self.collectionView];
-    [layout addSubview:self.effectBt];
-    [layout addSubview:self.beautifyBt];
-    [layout addSubview:self.styleBt];
-    [self addSubview:layout];
-    [self addSubview:self.slider];
     
-    [layout mas_makeConstraints:^(MASConstraintMaker *make) {
+    _switchCamera = [[UIButton alloc] init];
+    [self.switchCamera setTitle:@"切换相机" forState:UIControlStateNormal];
+    self.switchCamera.titleLabel.font = [UIFont systemFontOfSize:14];
+    [self.switchCamera setTitleColor:UIColor.whiteColor forState:UIControlStateNormal];
+    [self.switchCamera addTarget:self action:@selector(onSwitchCameraClick:) forControlEvents:UIControlEventTouchUpInside];
+
+    [self.bottomLayout addSubview:self.collectionView];
+    [self.bottomLayout addSubview:self.effectBt];
+    [self.bottomLayout addSubview:self.beautifyBt];
+    [self.bottomLayout addSubview:self.styleBt];
+    [self addSubview:self.bottomLayout];
+    [self addSubview:self.slider];
+    [self addSubview:self.switchCamera];
+    
+    [self.bottomLayout mas_makeConstraints:^(MASConstraintMaker *make) {
         make.left.equalTo(self.mas_left);
         make.right.equalTo(self.mas_right);
         make.bottom.equalTo(self.mas_bottom);
@@ -111,32 +120,38 @@
     [self.slider mas_makeConstraints:^(MASConstraintMaker *make) {
         make.width.mas_equalTo(150);
         make.centerX.equalTo(self.mas_centerX);
-        make.bottom.equalTo(layout.mas_top).offset(-10);
+        make.bottom.equalTo(self.bottomLayout.mas_top).offset(-10);
     }];
     
     [self.collectionView mas_makeConstraints:^(MASConstraintMaker *make) {
-        make.left.equalTo(layout.mas_left);
-        make.right.equalTo(layout.mas_right);
+        make.left.equalTo(self.bottomLayout.mas_left);
+        make.right.equalTo(self.bottomLayout.mas_right);
         make.height.mas_equalTo(71);
-        make.bottom.equalTo(self.mas_bottom).offset(-185);
+        make.bottom.equalTo(self.bottomLayout).offset(-185);
     }];
 
     [self.effectBt mas_makeConstraints:^(MASConstraintMaker *make) {
         make.size.mas_equalTo(CGSizeMake(34, 34));
-        make.left.equalTo(layout.mas_left).offset(36);
-        make.bottom.equalTo(layout.mas_bottom).offset(-65);
+        make.left.equalTo(self.bottomLayout.mas_left).offset(36);
+        make.bottom.equalTo(self.bottomLayout.mas_bottom).offset(-65);
     }];
     
     [self.beautifyBt mas_makeConstraints:^(MASConstraintMaker *make) {
         make.size.mas_equalTo(CGSizeMake(34, 34));
-        make.right.equalTo(layout.mas_right).offset(-36);
-        make.bottom.equalTo(layout.mas_bottom).offset(-65);
+        make.right.equalTo(self.bottomLayout.mas_right).offset(-36);
+        make.bottom.equalTo(self.bottomLayout.mas_bottom).offset(-65);
     }];
     
     [self.styleBt mas_makeConstraints:^(MASConstraintMaker *make) {
         make.size.mas_equalTo(CGSizeMake(34, 34));
         make.right.equalTo(self.beautifyBt.mas_left).offset(-36);
-        make.bottom.equalTo(layout.mas_bottom).offset(-65);
+        make.bottom.equalTo(self.bottomLayout.mas_bottom).offset(-65);
+    }];
+    
+    [self.switchCamera mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(100, 44));
+        make.top.equalTo(self.mas_top).offset(50);
+        make.centerX.equalTo(self.mas_centerX);
     }];
 }
 
@@ -232,21 +247,55 @@
     }
 }
 
+- (void)onSwitchCameraClick:(UIButton *)bt {
+    if (self.delegate) {
+        [self.delegate onSwitchCamera];
+    }
+}
+
 - (void)showCollectionView{
     [UIView animateWithDuration:0.3 animations:^{
-        self.beautifyBt.center = CGPointMake(self.beautifyBt.center.x,self.beautifyBt.center.y + 39);
-        self.effectBt.center = CGPointMake(self.effectBt.center.x,self.effectBt.center.y + 39);
-        self.styleBt.center = CGPointMake(self.styleBt.center.x,self.styleBt.center.y + 39);
-        self.collectionView.center = CGPointMake(self.collectionView.center.x,self.collectionView.center.y + 100);
+
+        [self.collectionView mas_updateConstraints:^(MASConstraintMaker *make) {
+            make.bottom.equalTo(self.mas_bottom).offset(-85);
+        }];
+        
+        [self.beautifyBt mas_updateConstraints:^(MASConstraintMaker *make) {
+            make.bottom.equalTo(self.mas_bottom).offset(-25);
+        }];
+        
+        [self.effectBt mas_updateConstraints:^(MASConstraintMaker *make) {
+            make.bottom.equalTo(self.mas_bottom).offset(-25);
+        }];
+        
+        [self.styleBt mas_updateConstraints:^(MASConstraintMaker *make) {
+            make.bottom.equalTo(self.mas_bottom).offset(-25);
+        }];
+        
+        [self.bottomLayout layoutIfNeeded];
     }];
 }
 
 - (void)hidenCollectionView{
     [UIView animateWithDuration:0.3 animations:^{
-        self.beautifyBt.center = CGPointMake(self.beautifyBt.center.x,self.beautifyBt.center.y - 39);
-        self.effectBt.center = CGPointMake(self.effectBt.center.x,self.effectBt.center.y - 39);
-        self.styleBt.center = CGPointMake(self.styleBt.center.x,self.styleBt.center.y - 39);
-        self.collectionView.center = CGPointMake(self.collectionView.center.x,self.collectionView.center.y - 100);
+
+        [self.collectionView mas_updateConstraints:^(MASConstraintMaker *make) {
+            make.bottom.equalTo(self.mas_bottom).offset(-185);
+        }];
+        
+        [self.beautifyBt mas_updateConstraints:^(MASConstraintMaker *make) {
+            make.bottom.equalTo(self.mas_bottom).offset(-65);
+        }];
+        
+        [self.effectBt mas_updateConstraints:^(MASConstraintMaker *make) {
+            make.bottom.equalTo(self.mas_bottom).offset(-65);
+        }];
+        
+        [self.styleBt mas_updateConstraints:^(MASConstraintMaker *make) {
+            make.bottom.equalTo(self.mas_bottom).offset(-65);
+        }];
+        
+        [self.bottomLayout layoutIfNeeded];
     }];
 }
 

@@ -12,7 +12,11 @@
 #import "AyEffect.h"
 #endif
 
-@interface AYGPUImageEffectFilter(){
+#if AY_ENABLE_EFFECT
+@interface AYGPUImageEffectFilter() <AyEffectDelegate>{
+#else
+@interface AYGPUImageEffectFilter() {
+#endif
     GLuint depthRenderbuffer;
 }
 
@@ -38,10 +42,10 @@
         [self createRBO];
 
         _effect = [[AyEffect alloc] init];
+        _effect.delegate = self;
         [self.effect initGLResource];
     });
     
-    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(aiyaMessage:) name:AiyaMessageNotification object:nil];
 #endif
     
     return self;
@@ -98,20 +102,22 @@
 }
 
 #if AY_ENABLE_EFFECT
-- (void)aiyaMessage:(NSNotification *)notifi{
-    NSString *message = notifi.userInfo[AiyaMessageNotificationUserInfoKey];
-    
+- (void)effectMessageWithType:(NSInteger)type ret:(NSInteger)ret {
     if (!self.effectPath || [self.effectPath isEqualToString:@""]){
-
-    }else if ([@"AY_EFFECTS_END" isEqualToString:message]) {//已经渲染完成一遍
+        
+    }else if (ret == MSG_STAT_EFFECTS_END || ret < 0) {//已经渲染完成一遍
         self.currentPlayCount ++;
-        if (self.effectPlayCount != 0 && self.currentPlayCount >= self.effectPlayCount){
+        if (ret < 0 || (self.effectPlayCount != 0 && self.currentPlayCount >= self.effectPlayCount)){
             [self setEffectPath:@""];
-            [[NSNotificationCenter defaultCenter] postNotificationName:AiyaMessageNotification object:nil userInfo:@{AiyaMessageNotificationUserInfoKey:@"AY_EFFECTS_REPLAY_END"}];
+            if (self.delegate) {
+                [self.delegate playEnd];
+            }
         }
     }else if (self.effectPlayCount != 0 && self.currentPlayCount >= self.effectPlayCount) {//已经播放完成
         [self setEffectPath:@""];
-        [[NSNotificationCenter defaultCenter] postNotificationName:AiyaMessageNotification object:nil userInfo:@{AiyaMessageNotificationUserInfoKey:@"AY_EFFECTS_REPLAY_END"}];
+        if (self.delegate) {
+            [self.delegate playEnd];
+        }
     }
 }
 #endif
